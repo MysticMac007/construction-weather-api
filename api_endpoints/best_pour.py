@@ -11,7 +11,6 @@ from common import (
     find_work_windows,
     suggest_materials,
     cached_parse_response,
-    require_api_key,
     logger,
     WEATHER_THRESHOLD_TEMP_MIN,
     WEATHER_THRESHOLD_TEMP_MAX,
@@ -19,6 +18,7 @@ from common import (
     WEATHER_THRESHOLD_RAIN
 )
 import json
+import prod  # Import prod.py to access validate_api_key
 
 best_pour_bp = Blueprint('best_pour', __name__)
 
@@ -50,8 +50,12 @@ best_pour_bp = Blueprint('best_pour', __name__)
         "400": {"description": "Invalid input"}
     }
 })
-@require_api_key
 def best_pour_calculations():
+    # Validate API key using the new function from prod.py
+    is_valid, message, status_code = prod.validate_api_key()
+    if not is_valid:
+        return jsonify({"error": message}), status_code
+
     logger.info(f"Received best_pour request: {request.get_json()}")
     try:
         data = BestPourRequest(**request.get_json())
