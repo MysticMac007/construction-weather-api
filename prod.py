@@ -113,7 +113,8 @@ limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["100 per
 # Register all endpoints
 register_endpoints()
 
+# Replace the if __name__ == "__main__" block in prod.py
 if __name__ == "__main__":
     register_endpoints()  # Ensure endpoints are registered
-    port = int(os.getenv("PORT", 5001))
+    port = int(os.getenv("PORT"))  # Remove fallback to 5001
     app.run(debug=False, host="0.0.0.0", port=port)
