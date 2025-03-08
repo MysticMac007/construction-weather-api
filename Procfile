@@ -1,0 +1,1 @@
+echo "web: gunicorn --workers 2 prod:app" > Procfile
