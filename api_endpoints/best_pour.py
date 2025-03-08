@@ -15,10 +15,10 @@ from common import (
     WEATHER_THRESHOLD_TEMP_MIN,
     WEATHER_THRESHOLD_TEMP_MAX,
     WEATHER_THRESHOLD_HUMIDITY_MAX,
-    WEATHER_THRESHOLD_RAIN
+    WEATHER_THRESHOLD_RAIN,
+    validate_api_key
 )
 import json
-import prod  # Import prod.py to access validate_api_key
 
 best_pour_bp = Blueprint('best_pour', __name__)
 
@@ -51,8 +51,8 @@ best_pour_bp = Blueprint('best_pour', __name__)
     }
 })
 def best_pour_calculations():
-    # Validate API key using the new function from prod.py
-    is_valid, message, status_code = prod.validate_api_key()
+    # Validate API key using the new function from common.py
+    is_valid, message, status_code = validate_api_key()
     if not is_valid:
         return jsonify({"error": message}), status_code
 

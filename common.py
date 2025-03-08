@@ -172,7 +172,7 @@ class RoofingRequest(BaseModel):
             raise ValueError(f"Start time validation failed: {str(e)}")
 
 
-# API key decorator
+# API key decorator (to be replaced)
 def require_api_key(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -182,6 +182,18 @@ def require_api_key(f):
         return f(*args, **kwargs)
 
     return decorated
+
+
+# Validate API key from RapidAPI (X-API-Key header)
+def validate_api_key():
+    api_key = request.headers.get('X-API-Key')
+    if not api_key:
+        return False, "X-API-Key header is required", 401
+    # Fallback to environment variable for local testing
+    expected_key = os.getenv("API_KEY", "550e8400-e29b-41d4-a716-446655440000")
+    if api_key != expected_key:  # Replace with RapidAPI validation logic later
+        return False, "Invalid API Key", 403
+    return True, None, 200
 
 
 # Mock weather data fetch (replace with actual API call in production)
@@ -279,21 +291,3 @@ def cached_parse_response(response_data: Dict[str, Any], endpoint_type: str, tz:
     except Exception as e:
         logger.error(f"OpenAI API error: {str(e)}")
         return "Simplified response for testing."
-
-
-# Flask app setup (used by prod.py)
-def create_app():
-    from flask import Flask
-    app = Flask(__name__)
-
-    # Register blueprints
-    from api_endpoints.exact_pour import exact_pour_calculations
-    from api_endpoints.best_pour import best_pour_calculations
-    from api_endpoints.roofing import roofing_calculations
-
-    app.register_blueprint(exact_pour_calculations, url_prefix="/api/calculate")
-    app.register_blueprint(best_pour_calculations, url_prefix="/api/calculate")
-    app.register_blueprint(roofing_calculations, url_prefix="/api/calculate")
-
-    logger.info("Endpoints registered successfully")
-    return app

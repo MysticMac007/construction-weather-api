@@ -1,11 +1,10 @@
 # api_endpoints/roofing.py
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
-from common import RoofingRequest, get_weather_data, find_work_windows, suggest_materials, cached_parse_response, logger
+from common import RoofingRequest, get_weather_data, find_work_windows, suggest_materials, cached_parse_response, logger, validate_api_key
 import pytz
 import json
 from datetime import datetime  # Use direct import so that datetime.strptime works
-import prod  # Import prod.py to access validate_api_key
 
 roofing_bp = Blueprint('roofing', __name__)
 
@@ -27,8 +26,8 @@ roofing_bp = Blueprint('roofing', __name__)
     }
 })
 def roofing_weather():
-    # Validate API key using the new function from prod.py
-    is_valid, message, status_code = prod.validate_api_key()
+    # Validate API key using the new function from common.py
+    is_valid, message, status_code = validate_api_key()
     if not is_valid:
         return jsonify({"error": message}), status_code
 

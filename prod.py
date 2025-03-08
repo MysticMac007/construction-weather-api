@@ -33,7 +33,8 @@ from common import (
     find_best_pouring_times,
     cached_parse_response,
     require_api_key,
-    logger
+    logger,
+    validate_api_key  # Add validate_api_key to the imports
 )
 
 app = Flask(__name__)
@@ -74,17 +75,6 @@ if not OPENAI_API_KEY:
     raise Exception("OPENAI_API_KEY is required in .env for production")
 openai.api_key = OPENAI_API_KEY
 
-# Validate API key from RapidAPI (X-API-Key header)
-def validate_api_key():
-    api_key = request.headers.get('X-API-Key')
-    if not api_key:
-        return False, "X-API-Key header is required", 401
-    # Fallback to environment variable for local testing
-    expected_key = os.getenv("API_KEY", "550e8400-e29b-41d4-a716-446655440000")
-    if api_key != expected_key:  # Replace with RapidAPI validation logic later
-        return False, "Invalid API Key", 403
-    return True, None, 200
-
 # Register endpoints
 def register_endpoints():
     try:
@@ -113,8 +103,7 @@ limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["100 per
 # Register all endpoints
 register_endpoints()
 
-# Replace the if __name__ == "__main__" block in prod.py
 if __name__ == "__main__":
     register_endpoints()  # Ensure endpoints are registered
-    port = int(os.getenv("PORT"))  # Remove fallback to 5001
+    port = int(os.getenv("PORT"))  # Use PORT env var without fallback
     app.run(debug=False, host="0.0.0.0", port=port)

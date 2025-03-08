@@ -3,8 +3,7 @@ from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 import pytz
 import json
-from common import PourRequest, get_weather_data, calculate_concrete_curing, calculate_paint_drying, cached_parse_response, logger
-import prod  # Import prod.py to access validate_api_key
+from common import PourRequest, get_weather_data, calculate_concrete_curing, calculate_paint_drying, cached_parse_response, logger, validate_api_key
 
 exact_pour_bp = Blueprint('exact_pour', __name__)
 
@@ -23,8 +22,8 @@ exact_pour_bp = Blueprint('exact_pour', __name__)
     "responses": {"200": {"description": "Success"}, "400": {"description": "Invalid input"}}
 })
 def exact_pour():
-    # Validate API key using the new function from prod.py
-    is_valid, message, status_code = prod.validate_api_key()
+    # Validate API key using the new function from common.py
+    is_valid, message, status_code = validate_api_key()
     if not is_valid:
         return jsonify({"error": message}), status_code
 
