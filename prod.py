@@ -34,7 +34,7 @@ from common import (
     cached_parse_response,
     require_api_key,
     logger,
-    validate_api_key  # Add validate_api_key to the imports
+    validate_api_key
 )
 
 app = Flask(__name__)
@@ -100,10 +100,9 @@ def register_endpoints():
 # Apply rate limiting
 limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["100 per day"])
 
-# Register all endpoints
+# Register all endpoints (only once at module level)
 register_endpoints()
 
 if __name__ == "__main__":
-    register_endpoints()  # Ensure endpoints are registered
     port = int(os.getenv("PORT"))  # Use PORT env var without fallback
     app.run(debug=False, host="0.0.0.0", port=port)
