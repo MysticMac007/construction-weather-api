@@ -1,8 +1,7 @@
-# prod.py
 import sys
 import os
 
-# Set up sys.path so that the project root is included.
+# Set up sys.path so that the project root is included
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(current_dir)
 if project_root not in sys.path:
@@ -68,27 +67,35 @@ swagger_template = {
 }
 swagger = Swagger(app, template=swagger_template)
 
+# Load API keys from environment variables with fallbacks
 WEATHER_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "aa8383339a96386447225767adc27e61")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
 if not OPENAI_API_KEY:
     raise Exception("OPENAI_API_KEY is required in .env for production")
 openai.api_key = OPENAI_API_KEY
-VALID_API_KEYS = {os.getenv("API_KEY", "550e8400-e29b-41d4-a716-446655440000")}
-logger.info(f".env loaded, API_KEY: {os.getenv('API_KEY')}")
-logger.info(f"Valid API keys: {VALID_API_KEYS}")
 
-limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["100 per day"])
+# Validate API key from RapidAPI (X-API-Key header)
+def validate_api_key():
+    api_key = request.headers.get('X-API-Key')
+    if not api_key:
+        return False, "X-API-Key header is required", 401
+    # Fallback to environment variable for local testing
+    expected_key = os.getenv("API_KEY", "550e8400-e29b-41d4-a716-446655440000")
+    if api_key != expected_key:  # Replace with RapidAPI validation logic later
+        return False, "Invalid API Key", 403
+    return True, None, 200
 
+# Register endpoints
 def register_endpoints():
     try:
         logger.info("Attempting to import and register endpoints...")
         from api_endpoints.exact_pour import exact_pour_calculations
         from api_endpoints.best_pour import best_pour_calculations
-        from api_endpoints.roofing import roofing_calculations  # Changed from roofing_weather to roofing_calculations
+        from api_endpoints.roofing import roofing_calculations
         logger.info(f"Imported blueprints: exact_pour={exact_pour_calculations}, best_pour={best_pour_calculations}, roofing={roofing_calculations}")
         app.register_blueprint(exact_pour_calculations, url_prefix='/api/calculate')
         app.register_blueprint(best_pour_calculations, url_prefix='/api/calculate')
-        app.register_blueprint(roofing_calculations, url_prefix='/api/calculate')  # Changed to roofing_calculations
+        app.register_blueprint(roofing_calculations, url_prefix='/api/calculate')
         logger.info("Endpoints registered successfully")
         # Log registered routes for debugging
         for rule in app.url_map.iter_rules():
@@ -100,7 +107,13 @@ def register_endpoints():
         logger.error(f"Failed to register endpoints: {str(e)}")
         raise
 
+# Apply rate limiting
+limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["100 per day"])
+
+# Register all endpoints
+register_endpoints()
+
 if __name__ == "__main__":
-    register_endpoints()
+    register_endpoints()  # Ensure endpoints are registered
     port = int(os.getenv("PORT", 5001))
     app.run(debug=False, host="0.0.0.0", port=port)
