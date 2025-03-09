@@ -1,1 +1,1 @@
-web: gunicorn --workers 2 -b 0.0.0.0:$PORT prod:app
+web: cd /app && gunicorn --workers 2 -b 0.0.0.0:$PORT prod:app
