@@ -1,6 +1,9 @@
 import sys
 import os
 
+# Debug: Confirm module is loaded
+print("Loading prod.py...")
+
 # Set up sys.path so that the project root is included
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(current_dir)
@@ -21,10 +24,13 @@ from dotenv import load_dotenv
 import openai
 from functools import wraps
 
-# Load environment variables
+# Debug: Confirm environment variables are loaded
+print("Loading environment variables...")
 load_dotenv()
+print("Environment variables loaded.")
 
 # Import shared definitions from common.py
+print("Importing from common.py...")
 from common import (
     PourRequest,
     get_weather_data,
@@ -36,11 +42,17 @@ from common import (
     logger,
     validate_api_key
 )
+print("Imported from common.py successfully.")
 
+# Debug: Confirm Flask app creation
+print("Creating Flask app instance...")
 app = Flask(__name__)
+print("Flask app instance created:", app)
+
 logging.basicConfig(level=logging.INFO)
 
 # Configure Swagger for OpenAPI 3.0.0
+print("Configuring Swagger...")
 app.config['SWAGGER'] = {
     'uiversion': 3,
     'openapi': '3.0.0',
@@ -67,42 +79,60 @@ swagger_template = {
     "components": {}
 }
 swagger = Swagger(app, template=swagger_template)
+print("Swagger configured successfully.")
 
 # Load API keys from environment variables with fallbacks
+print("Loading API keys from environment variables...")
 WEATHER_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "aa8383339a96386447225767adc27e61")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
+print(f"WEATHER_API_KEY: {'Set' if WEATHER_API_KEY else 'Not set'}")
+print(f"OPENAI_API_KEY: {'Set' if OPENAI_API_KEY else 'Not set'}")
 if not OPENAI_API_KEY:
     raise Exception("OPENAI_API_KEY is required in .env for production")
 openai.api_key = OPENAI_API_KEY
+print("API keys loaded and set for OpenAI.")
 
 # Register endpoints
 def register_endpoints():
     try:
+        print("Attempting to import and register endpoints...")
         logger.info("Attempting to import and register endpoints...")
         from api_endpoints.exact_pour import exact_pour_calculations
         from api_endpoints.best_pour import best_pour_calculations
         from api_endpoints.roofing import roofing_calculations
+        print(f"Imported blueprints: exact_pour={exact_pour_calculations}, best_pour={best_pour_calculations}, roofing={roofing_calculations}")
         logger.info(f"Imported blueprints: exact_pour={exact_pour_calculations}, best_pour={best_pour_calculations}, roofing={roofing_calculations}")
         app.register_blueprint(exact_pour_calculations, url_prefix='/api/calculate')
         app.register_blueprint(best_pour_calculations, url_prefix='/api/calculate')
         app.register_blueprint(roofing_calculations, url_prefix='/api/calculate')
+        print("Endpoints registered successfully.")
         logger.info("Endpoints registered successfully")
         # Log registered routes for debugging
         for rule in app.url_map.iter_rules():
+            print(f"Registered route: {rule} (methods: {rule.methods})")
             logger.info(f"Registered route: {rule} (methods: {rule.methods})")
     except ImportError as e:
+        print(f"Failed to import endpoint modules: {str(e)}")
         logger.error(f"Failed to import endpoint modules: {str(e)}")
         raise
     except Exception as e:
+        print(f"Failed to register endpoints: {str(e)}")
         logger.error(f"Failed to register endpoints: {str(e)}")
         raise
 
 # Apply rate limiting
+print("Applying rate limiting...")
 limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["100 per day"])
+print("Rate limiting applied.")
 
 # Register all endpoints (only once at module level)
+print("Registering all endpoints...")
 register_endpoints()
+print("All endpoints registered.")
 
 if __name__ == "__main__":
+    print("Starting Flask app...")
     port = int(os.getenv("PORT"))  # Use PORT env var without fallback
+    print(f"Running on port: {port}")
     app.run(debug=False, host="0.0.0.0", port=port)
+    print("Flask app started.")
