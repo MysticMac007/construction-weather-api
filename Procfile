@@ -1,1 +1,1 @@
-web: cd /app && gunicorn --workers 2 -b 0.0.0.0:$PORT prod:app
+web: gunicorn --worker-tmp-dir /dev/shm --workers 2 -b 0.0.0.0:$PORT prod:app
