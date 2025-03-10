@@ -190,33 +190,34 @@ def validate_api_key():
     Validates the API key from the request.
     Returns tuple of (is_valid, message, status_code)
     """
-    # Check if the request comes from RapidAPI
+    # Log headers for debugging (excluding sensitive headers)
+    headers_dict = dict(request.headers)
+    sanitized_headers = {k: v for k, v in headers_dict.items() if not any(sensitive in k.lower() for sensitive in ['key', 'token', 'auth'])}
+    logger.info(f"Received request with headers: {sanitized_headers}")
+    
+    # Check if RapidAPI integration is enabled
+    accept_rapidapi = os.getenv('ACCEPT_RAPIDAPI', 'false').lower() == 'true'
+    
+    # Check for RapidAPI headers
     rapid_api_key = request.headers.get('X-RapidAPI-Key')
     rapid_api_host = request.headers.get('X-RapidAPI-Host')
     
-    # If it has RapidAPI headers, validate or simply accept them
-    if rapid_api_key:
-        logger.info(f"Request received via RapidAPI with host: {rapid_api_host}")
+    # If RapidAPI is enabled and the request has RapidAPI headers, accept it
+    if accept_rapidapi and rapid_api_key:
+        logger.info(f"Request authenticated via RapidAPI with host: {rapid_api_host}")
         return True, "Valid RapidAPI key", 200
     
-    # Fallback to regular API key validation
+    # Otherwise, fall back to standard API key validation
     api_key = request.headers.get('X-API-Key')
-    
-    # Check if we're in development mode
-    flask_env = os.getenv('FLASK_ENV', '').lower()
-    is_dev = flask_env == 'development'
-    
-    # If no valid API keys are configured and we're in development, bypass auth
-    if not VALID_API_KEYS and is_dev:
-        logger.warning("No API keys configured, but in development mode. Bypassing API key validation.")
-        return True, "API key validation bypassed in development mode", 200
-    
-    # Standard validation for production
     if not api_key:
+        logger.warning("No X-API-Key header provided")
         return False, "X-API-Key header is required", 401
+    
     if api_key not in VALID_API_KEYS:
+        logger.warning(f"Invalid API key provided: {api_key[:5] if api_key else 'None'}...")
         return False, "Invalid API key", 403
-        
+    
+    logger.info("Request authenticated via X-API-Key")
     return True, "Valid API key", 200
 
 
