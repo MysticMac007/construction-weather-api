@@ -186,14 +186,38 @@ def require_api_key(f):
 
 # Validate API key from RapidAPI (X-API-Key header)
 def validate_api_key():
+    """
+    Validates the API key from the request.
+    Returns tuple of (is_valid, message, status_code)
+    """
+    # Check if the request comes from RapidAPI
+    rapid_api_key = request.headers.get('X-RapidAPI-Key')
+    rapid_api_host = request.headers.get('X-RapidAPI-Host')
+    
+    # If it has RapidAPI headers, validate or simply accept them
+    if rapid_api_key:
+        logger.info(f"Request received via RapidAPI with host: {rapid_api_host}")
+        return True, "Valid RapidAPI key", 200
+    
+    # Fallback to regular API key validation
     api_key = request.headers.get('X-API-Key')
+    
+    # Check if we're in development mode
+    flask_env = os.getenv('FLASK_ENV', '').lower()
+    is_dev = flask_env == 'development'
+    
+    # If no valid API keys are configured and we're in development, bypass auth
+    if not VALID_API_KEYS and is_dev:
+        logger.warning("No API keys configured, but in development mode. Bypassing API key validation.")
+        return True, "API key validation bypassed in development mode", 200
+    
+    # Standard validation for production
     if not api_key:
         return False, "X-API-Key header is required", 401
-    # Fallback to environment variable for local testing
-    expected_key = os.getenv("API_KEY", "550e8400-e29b-41d4-a716-446655440000")
-    if api_key != expected_key:  # Replace with RapidAPI validation logic later
-        return False, "Invalid API Key", 403
-    return True, None, 200
+    if api_key not in VALID_API_KEYS:
+        return False, "Invalid API key", 403
+        
+    return True, "Valid API key", 200
 
 
 # Mock weather data fetch (replace with actual API call in production)
