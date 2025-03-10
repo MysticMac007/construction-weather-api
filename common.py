@@ -198,14 +198,14 @@ def validate_api_key():
     # Check if RapidAPI integration is enabled
     accept_rapidapi = os.getenv('ACCEPT_RAPIDAPI', 'false').lower() == 'true'
     
-    # Check for RapidAPI headers
-    rapid_api_key = request.headers.get('X-RapidAPI-Key')
+    # Check for RapidAPI headers - the X-RapidAPI-Host is more consistently present
     rapid_api_host = request.headers.get('X-RapidAPI-Host')
+    rapid_api_user = request.headers.get('X-RapidAPI-User')
     
-    # If RapidAPI is enabled and the request has RapidAPI headers, accept it
-    if accept_rapidapi and rapid_api_key:
-        logger.info(f"Request authenticated via RapidAPI with host: {rapid_api_host}")
-        return True, "Valid RapidAPI key", 200
+    # If RapidAPI is enabled and the request has RapidAPI host header, accept it
+    if accept_rapidapi and rapid_api_host:
+        logger.info(f"Request authenticated via RapidAPI with host: {rapid_api_host} and user: {rapid_api_user}")
+        return True, "Valid RapidAPI request", 200
     
     # Otherwise, fall back to standard API key validation
     api_key = request.headers.get('X-API-Key')
