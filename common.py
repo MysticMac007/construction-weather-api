@@ -202,17 +202,10 @@ def validate_api_key():
     rapid_api_key = request.headers.get('X-RapidAPI-Key')
     rapid_api_host = request.headers.get('X-RapidAPI-Host')
     
-    # Check for Bearer token in Authorization header
-    auth_header = request.headers.get('Authorization')
-    has_bearer_token = auth_header and auth_header.startswith('Bearer ')
-    
-    # If RapidAPI is enabled and the request has RapidAPI headers or Bearer token, accept it
-    if accept_rapidapi and (rapid_api_key or has_bearer_token):
-        if rapid_api_key:
-            logger.info(f"Request authenticated via RapidAPI Key with host: {rapid_api_host}")
-        elif has_bearer_token:
-            logger.info("Request authenticated via Bearer token from RapidAPI")
-        return True, "Valid RapidAPI authentication", 200
+    # If RapidAPI is enabled and the request has RapidAPI headers, accept it
+    if accept_rapidapi and rapid_api_key:
+        logger.info(f"Request authenticated via RapidAPI with host: {rapid_api_host}")
+        return True, "Valid RapidAPI key", 200
     
     # Otherwise, fall back to standard API key validation
     api_key = request.headers.get('X-API-Key')
@@ -221,7 +214,7 @@ def validate_api_key():
         return False, "X-API-Key header is required", 401
     
     if api_key not in VALID_API_KEYS:
-        logger.warning(f"Invalid API key provided: {api_key[:5] if api_key else 'None'}...")
+        logger.warning(f"Invalid API key provided: {api_key}")  # Log the full key for debugging
         return False, "Invalid API key", 403
     
     logger.info("Request authenticated via X-API-Key")
