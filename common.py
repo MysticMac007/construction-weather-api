@@ -315,12 +315,71 @@ def suggest_materials(weather_data: Dict[str, Any], start_dt: datetime, tz_obj: 
 
 # Placeholder for response parsing with OpenAI
 def cached_parse_response(response_data: Dict[str, Any], endpoint_type: str, tz: str) -> str:
-    prompt = f"Generate a human-friendly insight for a {endpoint_type} response: {json.dumps(response_data)} in timezone {tz}"
+    # Create specialized prompts based on endpoint type
+    if endpoint_type == "exact_pour":
+        system_message = """You are Jim, a 30-year veteran concrete contractor who gives straight-talking, practical advice.
+        Always refer to locations by city/region name, NEVER mention coordinates in your response.
+        Speak directly to the contractor as if you're having a conversation at a job site.
+        Use natural conversational language. Avoid technical jargon unless essential.
+        Never use phrases like "human-friendly insight", "based on the provided data", or similar AI-like language."""
+        
+        prompt = f"""The customer needs advice about a concrete pour scheduled for the coordinates in this data.
+        
+        Your response should:
+        - Convert the coordinates to a city/region name (don't mention coordinates in your response)
+        - Talk about the pour timing and expected curing time in practical terms
+        - Mention relevant weather factors that might affect the quality of the work
+        - Give practical advice as if you're talking to another contractor at a job site
+        - Suggest what other construction tasks could be scheduled after curing completes
+        
+        Data: {json.dumps(response_data)} in timezone {tz}"""
+    
+    elif endpoint_type == "best_pour":
+        system_message = """You are Mike, a construction foreman with 25 years of experience scheduling concrete jobs.
+        Always refer to locations by city/region name, NEVER mention coordinates in your response.
+        Speak as if you're giving advice to a fellow contractor planning their week.
+        Use natural conversational language with a helpful, practical tone.
+        Never use phrases like "human-friendly insight", "based on the provided data", or similar AI-like language."""
+        
+        prompt = f"""The customer needs to know the best day to schedule a concrete pour at the coordinates in this data.
+        
+        Your response should:
+        - Convert the coordinates to a city/region name (don't mention coordinates in your response)
+        - Give clear advice about which day/time is best for pouring
+        - Explain in practical terms why that time is better than alternatives
+        - Include any weather concerns they should know about
+        - Speak like you would to a colleague at a construction site
+        
+        Data: {json.dumps(response_data)} in timezone {tz}"""
+    
+    elif endpoint_type == "roofing_weather":
+        system_message = """You are Dave, a roofing contractor with decades of experience working with various roofing materials.
+        Always refer to locations by city/region name, NEVER mention coordinates in your response.
+        Speak as if you're giving advice to a homeowner or contractor at a building supply store.
+        Use natural conversational language with a helpful, practical tone.
+        Never use phrases like "human-friendly insight", "based on the provided data", or similar AI-like language."""
+        
+        prompt = f"""The customer needs to know if the weather is good for installing {response_data.get('roofing_type', 'roofing')} at the coordinates in this data.
+        
+        Your response should:
+        - Convert the coordinates to a city/region name (don't mention coordinates in your response)
+        - Speak clearly about whether the weather looks good or bad for the roofing job
+        - Mention any specific weather factors that might affect installation quality
+        - Give practical recommendations about timing the work
+        - Sound like natural advice you'd give to someone at a job site
+        
+        Data: {json.dumps(response_data)} in timezone {tz}"""
+    
+    else:
+        # Default prompt for any other endpoint types
+        system_message = "You are an experienced construction professional providing practical, direct advice."
+        prompt = f"Give straightforward, helpful feedback about this construction data. Don't mention coordinates directly, use city/region names instead: {json.dumps(response_data)} in timezone {tz}"
+    
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant providing construction scheduling advice."},
+                {"role": "system", "content": system_message},
                 {"role": "user", "content": prompt}
             ]
         )
