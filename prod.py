@@ -130,6 +130,37 @@ print("Registering all endpoints...")
 register_endpoints()
 print("All endpoints registered.")
 
+# Add a debug route to see all headers
+@app.route('/api/debug', methods=['GET', 'POST'])
+def debug_headers():
+    """
+    Debug endpoint to see all headers sent by RapidAPI
+    """
+    # Create a dictionary with all headers
+    headers = dict(request.headers)
+    
+    # Create sanitized headers for logging (without sensitive info)
+    sanitized_headers = {k: v for k, v in headers.items() if not any(
+        sensitive in k.lower() for sensitive in ['key', 'token', 'auth']
+    )}
+    logger.info(f"DEBUG ENDPOINT: Received headers: {sanitized_headers}")
+    
+    # Create a response with all headers, request method, and path
+    response = {
+        "status": "success",
+        "message": "Debug endpoint - displaying all headers",
+        "timestamp": datetime.now().isoformat(),
+        "headers": headers,
+        "method": request.method,
+        "path": request.path,
+        "has_rapidapi_key": "X-RapidAPI-Key" in headers,
+        "has_rapidapi_host": "X-RapidAPI-Host" in headers,
+        "has_api_key": "X-API-Key" in headers,
+        "has_authorization": "Authorization" in headers
+    }
+    
+    return jsonify(response)
+
 if __name__ == "__main__":
     print("Starting Flask app...")
     port = int(os.getenv("PORT"))  # Use PORT env var without fallback

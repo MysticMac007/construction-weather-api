@@ -192,33 +192,45 @@ def validate_api_key():
     """
     # Log headers for debugging (excluding sensitive headers)
     headers_dict = dict(request.headers)
-    sanitized_headers = {k: v for k, v in headers_dict.items() if not any(sensitive in k.lower() for sensitive in ['key', 'token', 'auth'])}
+    sanitized_headers = {k: v for k, v in headers_dict.items() if not any(sensitive in k.lower() for sensitive in ['key', 'token', 'auth', 'secret'])}
     logger.info(f"Received request with headers: {sanitized_headers}")
     
     # Check if RapidAPI integration is enabled
     accept_rapidapi = os.getenv('ACCEPT_RAPIDAPI', 'false').lower() == 'true'
     
-    # Check for RapidAPI headers - the X-RapidAPI-Host is more consistently present
-    rapid_api_host = request.headers.get('X-RapidAPI-Host')
-    rapid_api_user = request.headers.get('X-RapidAPI-User')
-    
-    # If RapidAPI is enabled and the request has RapidAPI host header, accept it
-    if accept_rapidapi and rapid_api_host:
-        logger.info(f"Request authenticated via RapidAPI with host: {rapid_api_host} and user: {rapid_api_user}")
-        return True, "Valid RapidAPI request", 200
-    
-    # Otherwise, fall back to standard API key validation
+    # First check standard API key header
     api_key = request.headers.get('X-API-Key')
+    if api_key and api_key in VALID_API_KEYS:
+        logger.info("Request authenticated via X-API-Key")
+        return True, "Valid API key", 200
+    
+    # If RapidAPI is enabled, check for RapidAPI headers
+    if accept_rapidapi:
+        # Check for the RapidAPI host header to identify RapidAPI requests
+        rapid_api_host = request.headers.get('X-RapidAPI-Host')
+        
+        # Only proceed with RapidAPI validation if the host header is present
+        if rapid_api_host:
+            # Check for the RapidAPI proxy secret which should be present in genuine RapidAPI requests
+            rapid_api_proxy_secret = request.headers.get('X-RapidAPI-Proxy-Secret')
+            rapid_api_user = request.headers.get('X-RapidAPI-User')
+            
+            if rapid_api_proxy_secret:
+                logger.info(f"Request authenticated via RapidAPI proxy secret, host: {rapid_api_host}, user: {rapid_api_user}")
+                return True, "Valid RapidAPI request", 200
+            
+            # As a fallback, check additional RapidAPI headers if proxy secret is missing
+            if request.headers.get('X-RapidAPI-Subscription'):
+                logger.info(f"Request authenticated via RapidAPI subscription, host: {rapid_api_host}, user: {rapid_api_user}")
+                return True, "Valid RapidAPI request", 200
+    
+    # If we get here, authentication failed
     if not api_key:
-        logger.warning("No X-API-Key header provided")
-        return False, "X-API-Key header is required", 401
-    
-    if api_key not in VALID_API_KEYS:
-        logger.warning(f"Invalid API key provided: {api_key}")  # Log the full key for debugging
+        logger.warning("No X-API-Key header provided and not a valid RapidAPI request")
+        return False, "Valid API key or RapidAPI authentication required", 401
+    else:
+        logger.warning(f"Invalid API key provided: {api_key}")
         return False, "Invalid API key", 403
-    
-    logger.info("Request authenticated via X-API-Key")
-    return True, "Valid API key", 200
 
 
 # Mock weather data fetch (replace with actual API call in production)
